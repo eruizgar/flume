@@ -229,7 +229,6 @@ public class Application {
   public static void main(String[] args) {
 
     try {
-
       boolean isZkConfigured = false;
 
       Options options = new Options();
@@ -261,6 +260,9 @@ public class Application {
       option = new Option("h", "help", false, "display help text");
       options.addOption(option);
 
+      option = new Option("confprovider", true, "specify a conf provider");
+      options.addOption(option);
+
       CommandLineParser parser = new GnuParser();
       CommandLine commandLine = parser.parse(options, args);
 
@@ -276,67 +278,83 @@ public class Application {
         isZkConfigured = true;
       }
       Application application = null;
-      if (isZkConfigured) {
-        // get options
-        String zkConnectionStr = commandLine.getOptionValue('z');
-        String baseZkPath = commandLine.getOptionValue('p');
 
-        if (reload) {
-          EventBus eventBus = new EventBus(agentName + "-event-bus");
-          List<LifecycleAware> components = Lists.newArrayList();
-          PollingZooKeeperConfigurationProvider zookeeperConfigurationProvider =
-            new PollingZooKeeperConfigurationProvider(
-              agentName, zkConnectionStr, baseZkPath, eventBus);
-          components.add(zookeeperConfigurationProvider);
-          application = new Application(components);
-          eventBus.register(application);
-        } else {
-          StaticZooKeeperConfigurationProvider zookeeperConfigurationProvider =
-            new StaticZooKeeperConfigurationProvider(
-              agentName, zkConnectionStr, baseZkPath);
-          application = new Application();
-          application.handleConfigurationEvent(zookeeperConfigurationProvider
-            .getConfiguration());
+      if(commandLine.hasOption("confprovider")){
+        application = new Application();
+        try {
+          Class <?> configurationProviderClass = Class.forName(commandLine.getOptionValue("confprovider"));
+          application.handleConfigurationEvent(((GenericConfigurationProvider) configurationProviderClass
+                  .getDeclaredConstructor(String.class, CommandLine.class).newInstance(agentName, commandLine)).getConfiguration());
+        }catch (ClassNotFoundException cfe){
+          logger.error("Failed to load configuration provider class", cfe);
         }
-      } else {
-        File configurationFile = new File(commandLine.getOptionValue('f'));
+        catch (InstantiationException ex){
+          logger.error("Failed to instantiated configuration provider class", ex);
+        }
+      }
+      else {
+        if (isZkConfigured) {
+          // get options
+          String zkConnectionStr = commandLine.getOptionValue('z');
+          String baseZkPath = commandLine.getOptionValue('p');
+
+          if (reload) {
+            EventBus eventBus = new EventBus(agentName + "-event-bus");
+            List<LifecycleAware> components = Lists.newArrayList();
+            PollingZooKeeperConfigurationProvider zookeeperConfigurationProvider =
+                    new PollingZooKeeperConfigurationProvider(
+                            agentName, zkConnectionStr, baseZkPath, eventBus);
+            components.add(zookeeperConfigurationProvider);
+            application = new Application(components);
+            eventBus.register(application);
+          } else {
+            StaticZooKeeperConfigurationProvider zookeeperConfigurationProvider =
+                    new StaticZooKeeperConfigurationProvider(
+                            agentName, zkConnectionStr, baseZkPath);
+            application = new Application();
+            application.handleConfigurationEvent(zookeeperConfigurationProvider
+                    .getConfiguration());
+          }
+        } else {
+          File configurationFile = new File(commandLine.getOptionValue('f'));
 
         /*
          * The following is to ensure that by default the agent will fail on
          * startup if the file does not exist.
          */
-        if (!configurationFile.exists()) {
-          // If command line invocation, then need to fail fast
-          if (System.getProperty(Constants.SYSPROP_CALLED_FROM_SERVICE) ==
-            null) {
-            String path = configurationFile.getPath();
-            try {
-              path = configurationFile.getCanonicalPath();
-            } catch (IOException ex) {
-              logger.error("Failed to read canonical path for file: " + path,
-                ex);
+          if (!configurationFile.exists()) {
+            // If command line invocation, then need to fail fast
+            if (System.getProperty(Constants.SYSPROP_CALLED_FROM_SERVICE) ==
+                    null) {
+              String path = configurationFile.getPath();
+              try {
+                path = configurationFile.getCanonicalPath();
+              } catch (IOException ex) {
+                logger.error("Failed to read canonical path for file: " + path,
+                        ex);
+              }
+              throw new ParseException(
+                      "The specified configuration file does not exist: " + path);
             }
-            throw new ParseException(
-              "The specified configuration file does not exist: " + path);
           }
-        }
-        List<LifecycleAware> components = Lists.newArrayList();
+          List<LifecycleAware> components = Lists.newArrayList();
 
-        if (reload) {
-          EventBus eventBus = new EventBus(agentName + "-event-bus");
-          PollingPropertiesFileConfigurationProvider configurationProvider =
-            new PollingPropertiesFileConfigurationProvider(
-              agentName, configurationFile, eventBus, 30);
-          components.add(configurationProvider);
-          application = new Application(components);
-          eventBus.register(application);
-        } else {
-          PropertiesFileConfigurationProvider configurationProvider =
-            new PropertiesFileConfigurationProvider(
-              agentName, configurationFile);
-          application = new Application();
-          application.handleConfigurationEvent(configurationProvider
-            .getConfiguration());
+          if (reload) {
+            EventBus eventBus = new EventBus(agentName + "-event-bus");
+            PollingPropertiesFileConfigurationProvider configurationProvider =
+                    new PollingPropertiesFileConfigurationProvider(
+                            agentName, configurationFile, eventBus, 30);
+            components.add(configurationProvider);
+            application = new Application(components);
+            eventBus.register(application);
+          } else {
+            PropertiesFileConfigurationProvider configurationProvider =
+                    new PropertiesFileConfigurationProvider(
+                            agentName, configurationFile);
+            application = new Application();
+            application.handleConfigurationEvent(configurationProvider
+                    .getConfiguration());
+          }
         }
       }
       application.start();
