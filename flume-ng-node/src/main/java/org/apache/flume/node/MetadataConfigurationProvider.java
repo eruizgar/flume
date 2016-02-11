@@ -31,9 +31,6 @@ import org.apache.flume.conf.FlumeConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Created by eruiz on 9/02/16.
- */
 public class MetadataConfigurationProvider extends GenericConfigurationProvider{
     private static final Logger LOGGER = LoggerFactory
             .getLogger(MetadataConfigurationProvider.class);
@@ -46,12 +43,12 @@ public class MetadataConfigurationProvider extends GenericConfigurationProvider{
     public FlumeConfiguration getFlumeConfiguration() {
         BufferedReader reader = null;
         try {
-            reader = new BufferedReader(new FileReader(commandLine.getOptionValue('f')));
+            reader = new BufferedReader(new FileReader(commandLine.getArgs()[0]));
             Properties properties = new Properties();
             properties.load(reader);
             return new FlumeConfiguration(toMap(properties));
         } catch (IOException ex) {
-            LOGGER.error("Unable to load file:" + commandLine.getOptionValue('f')
+            LOGGER.error("Unable to load file:" + commandLine.getArgs()[0]
                     + " (I/O failure) - Exception follows.", ex);
         } finally {
             if (reader != null) {
@@ -59,7 +56,7 @@ public class MetadataConfigurationProvider extends GenericConfigurationProvider{
                     reader.close();
                 } catch (IOException ex) {
                     LOGGER.warn(
-                            "Unable to close file reader for file: " + commandLine.getOptionValue('f'), ex);
+                            "Unable to close file reader for file: " + commandLine.getArgs()[0], ex);
                 }
             }
         }

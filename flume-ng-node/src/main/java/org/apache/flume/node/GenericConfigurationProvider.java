@@ -35,32 +35,15 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 
 /**
- * ZooKeeper based configuration implementation provider.
+ * Generic based configuration implementation provider.
  * 
- * The Agent configuration can be uploaded in ZooKeeper under a base name, which
- * defaults to /flume
- * 
- * Currently the agent configuration is stored under the agent name node in
- * ZooKeeper
- * 
- * <PRE>
- *   /flume
- *       /a1 [agent config file]
- *       /a2 [agent config file]
- *       /a3 [agent config file]
- * </PRE>
- * 
+ * You can implement your own class passing a parameter whit needs that you have.
+ *
  * Configuration format is same as PropertiesFileConfigurationProvider
  * 
  * Configuration properties
  * 
  * agentName - Name of Agent for which configuration needs to be pulled
- * 
- * zkConnString - Connection string to ZooKeeper Ensemble
- * (host:port,host1:port1)
- * 
- * basePath - Base Path where agent configuration needs to be stored. Defaults
- * to /flume
  */
 public abstract class GenericConfigurationProvider extends
     AbstractConfigurationProvider {

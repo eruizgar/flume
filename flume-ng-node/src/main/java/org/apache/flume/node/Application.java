@@ -279,12 +279,13 @@ public class Application {
       }
       Application application = null;
 
-      if(commandLine.hasOption("confprovider")){
+      if(commandLine.hasOption("confprovider")) {
         application = new Application();
         try {
           Class <?> configurationProviderClass = Class.forName(commandLine.getOptionValue("confprovider"));
           application.handleConfigurationEvent(((GenericConfigurationProvider) configurationProviderClass
-                  .getDeclaredConstructor(String.class, CommandLine.class).newInstance(agentName, commandLine)).getConfiguration());
+                  .getDeclaredConstructor(String.class, CommandLine.class).newInstance(agentName, commandLine))
+                  .getConfiguration());
         }catch (ClassNotFoundException cfe){
           logger.error("Failed to load configuration provider class", cfe);
         }
